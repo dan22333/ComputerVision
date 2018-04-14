@@ -30,10 +30,10 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  classes_num = W.shape[1]
-  train_num = X.shape[0]
+  num_classes = W.shape[1]
+  num_train = X.shape[0]
 
-  for i in range(train_num):
+  for i in range(num_train):
 
       #compute weights dot product
       weight_product = X[i].dot(W)
@@ -46,7 +46,7 @@ def softmax_loss_naive(W, X, y, reg):
 
       # grad
       # for correct class
-      for j in range(classes_num):
+      for j in range(num_classes):
           # pass correct class gradient
           if j == y[i]:
              # for correct classes the derivative is -X[i](1-p(j))
@@ -55,9 +55,9 @@ def softmax_loss_naive(W, X, y, reg):
             # for incorrect classes the derivative is p(j)X[i]
             dW[:, j] += (exp_product[j]/denomenator) * X[i]
 
-  dW /= train_num
+  dW /= num_train
   dW += 2 * reg * W
-  loss /= train_num
+  loss /= num_train
   loss += reg * np.sum(W * W)
   #############################################################################
   #                          END OF YOUR CODE                                 #
@@ -82,24 +82,24 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  classes_num = W.shape[1]
-  train_num = X.shape[0]
+  num_classes = W.shape[1]
+  num_train = X.shape[0]
 
   weight_product = np.dot(X,W)
   exp_product = np.apply_along_axis(lambda x: np.exp(x - np.max(x)), 1,weight_product)
   probabilites= np.apply_along_axis(lambda x: x / np.sum(x), 1,exp_product)
-  loss = loss = np.sum(-np.log(probabilites[np.arange(train_num), y]))
+  loss = loss = np.sum(-np.log(probabilites[np.arange(num_train), y]))
   
   indices = np.zeros_like(probabilites)
   #mark locations of correct index
-  indices[np.arange(train_num), y] = 1
+  indices[np.arange(num_train), y] = 1
   #derivate is x*p(j) for incorrrect labels and x(p(j)-1) for correct labels
   prob_for_gradient = probabilites - indices
   dW = np.dot(X.T,probabilites - indices)
 
-  dW /= train_num
+  dW /= num_train
   dW += 2 * reg * W
-  loss /= train_num
+  loss /= num_train
   loss += reg * np.sum(W * W)
   #############################################################################
   #                          END OF YOUR CODE                                 #
