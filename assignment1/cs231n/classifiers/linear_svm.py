@@ -34,6 +34,8 @@ def svm_loss_naive(W, X, y, reg):
         continue
       margin = scores[j] - correct_class_score + 1 # note delta = 1
       if margin > 0:
+        dW[:, j] += X[i] 
+        dW[:, y[i]] += -1* X[i]
         loss += margin
 
   # Right now the loss is a sum over all training examples, but we want it
@@ -51,7 +53,8 @@ def svm_loss_naive(W, X, y, reg):
   # loss is being computed. As a result you may need to modify some of the    #
   # code above to compute the gradient.                                       #
   #############################################################################
-
+  dW /= num_train
+  dW += 2*reg*W # regularize the weights
 
   return loss, dW
 
@@ -63,6 +66,8 @@ def svm_loss_vectorized(W, X, y, reg):
   Inputs and outputs are the same as svm_loss_naive.
   """
   loss = 0.0
+  W_new = W.T #chage the DATA for easier calculation
+  X_new = X.T
   dW = np.zeros(W.shape) # initialize the gradient as zero
 
   #############################################################################
@@ -70,7 +75,23 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  
+  vec_scores = np.dot(W_new,X_new) # the result is shape of (49000,10)
+  correct_vec_scores = np.ones(vec_scores.shape) * vec_scores[y, np.arange(0,vec_scores.shape[1])]
+  vec_deltas = np.ones(vec_scores.shape)
+  L = vec_scores - correct_vec_scores + vec_deltas
+  
+  L[L < 0] = 0
+  L[y, np.arange(0,vec_scores.shape[1])] = 0
+  loss = np.sum(L)
+  
+  num_train = X_new.shape[1]
+  loss /= num_train
+  
+  loss +=  reg * np.sum(W * W)
+  
+  
+  
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -85,9 +106,23 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  grad = np.zeros(vec_scores.shape)
+  
+  L = vec_scores - correct_vec_scores + vec_deltas
+  L[L < 0] = 0
+  L[L > 0] = 1
+  L[y, np.arange(0, vec_scores.shape[1])] = 0
+  L[y, np.arange(0, vec_scores.shape[1])] = -1 * np.sum(L, axis=0)
+  dW = np.dot(L, X_new.T)
+  
+  num_train = X_new.shape[1]
+  dW /= num_train
+  dW=dW.T
+  dW += 2*reg*W
+  
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
 
   return loss, dW
+
