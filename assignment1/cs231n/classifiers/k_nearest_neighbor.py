@@ -160,8 +160,11 @@ class KNearestNeighbor(object):
       # neighbors. Store these labels in closest_y.                           #
       # Hint: Look up the function numpy.argsort.                             #
       #########################################################################
+      #sort valves
       indices = np.argsort(dists[i])
+      #get labels from sorted values
       sorted_train_labels = self.y_train[indices]
+      #get best k labels
       closest_y = sorted_train_labels[:k]
       #########################################################################
       # TODO:                                                                 #
@@ -170,6 +173,7 @@ class KNearestNeighbor(object):
       # Store this label in y_pred[i]. Break ties by choosing the smaller     #
       # label.                                                                #
       #########################################################################
+      #bining the classes to find mose common label
       binning = np.bincount(closest_y)
       y_pred[i] = np.argmax(binning)
       #########################################################################

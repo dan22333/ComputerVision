@@ -39,9 +39,12 @@ def softmax_loss_naive(W, X, y, reg):
       weight_product = X[i].dot(W)
       # shift of values to prevent overflow to infinity
       weight_product -= np.max(weight_product)
+       # compute the exponents
       exp_product = np.exp(weight_product)
+      #computer probability
       numerator = exp_product[y[i]]
       denomenator = np.sum(exp_product)
+      #add loss
       loss += - np.log(numerator / denomenator)
 
       # grad
@@ -54,10 +57,13 @@ def softmax_loss_naive(W, X, y, reg):
           else:
             # for incorrect classes the derivative is p(j)X[i]
             dW[:, j] += (exp_product[j]/denomenator) * X[i]
-
+  #divide by number of traning examples
   dW /= num_train
+  #add regrulization derivative
   dW += 2 * reg * W
+  #divide by number of traning examples
   loss /= num_train
+  #add loss from regulization
   loss += reg * np.sum(W * W)
   #############################################################################
   #                          END OF YOUR CODE                                 #
@@ -84,11 +90,14 @@ def softmax_loss_vectorized(W, X, y, reg):
   #############################################################################
   num_classes = W.shape[1]
   num_train = X.shape[0]
-
+  #compute products
   weight_product = np.dot(X,W)
+  #compute exp part of fractions
   exp_product = np.apply_along_axis(lambda x: np.exp(x - np.max(x)), 1,weight_product)
+  #trun into proabilities
   probabilites= np.apply_along_axis(lambda x: x / np.sum(x), 1,exp_product)
-  loss = loss = np.sum(-np.log(probabilites[np.arange(num_train), y]))
+  #compute loss
+  loss = np.sum(-np.log(probabilites[np.arange(num_train), y]))
   
   indices = np.zeros_like(probabilites)
   #mark locations of correct index
@@ -97,9 +106,13 @@ def softmax_loss_vectorized(W, X, y, reg):
   prob_for_gradient = probabilites - indices
   dW = np.dot(X.T,probabilites - indices)
 
+  #divide by number of traning examples
   dW /= num_train
+  #add regrulization derivative
   dW += 2 * reg * W
+  #divide by number of traning examples
   loss /= num_train
+  #add loss from regulization
   loss += reg * np.sum(W * W)
   #############################################################################
   #                          END OF YOUR CODE                                 #
