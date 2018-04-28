@@ -151,22 +151,48 @@ public class LoadImageApp extends Component {
     	int width = img.getWidth();
     	int height = img.getHeight();
     	double[][] entropyTable = new double[width][height];
-    	
-    	//*********** TODO *******************
-    	
+    	double P_mn;
+    	for(int x=0; x<width; x++) {
+    		for (int y=0; y < height; y++) {
+    			if((x>3) &&(x<width-4)&&(y>3) &&(y< height-4)) {
+    				for (int m= x-4; m<=x+4;m++) {
+        				for ( int n = y-4; n<=y+4; n++) {
+        					entropyTable[x][y] += P_mn(m,n,x,y, img);
+        				}	
+        			}	
+    			}
+    			
+    			entropyTable[x][y] = (-1) *entropyTable[x][y]; 
+    		}
+    	}
     	return entropyTable;
     }
     
+    public static double P_mn (int m, int n,int x, int y, BufferedImage img) {
+    	double P_mnLog =0 ;
+    	double temp=0;
+    	P_mnLog = img.getRGB(m, n);
+    	for (int k = x-4; k<=x+4;k++) {
+    		for (int l = y-4; l <= y+4; l++) {
+    			temp +=img.getRGB(k,l);
+    		}
+    	}
+    	P_mnLog /= temp;
+    	P_mnLog *= Math.log(P_mnLog);
+    	return P_mnLog;
+    }
     
     // The combined table is a combination between the entropy table and the energy table with the proportion of our choise
     public static double[][] CombineTables(BufferedImage img, double[][] energyTable, double[][] entropyTable) {
     	int width = img.getWidth();
     	int height = img.getHeight();
-    	double[][] CombainedTable = new double[width][height];
-    	
-    	//*********** TODO *******************
-    	
-    	return CombainedTable;
+    	double[][] CombinedTable = new double[width][height];
+    	for (int x=0; x<width; x++) {
+    		for (int y=0; y<height;y++) {
+    			CombinedTable[x][y] = 0.5*energyTable[x][y]+0.5*entropyTable[x][y];
+    		}
+    	}
+    	return CombinedTable;
     }
   //computing the forward energy
     public static double[][] forwardEnergy(BufferedImage img){
