@@ -54,8 +54,8 @@ public class LoadImageApp extends Component {
         int height = img.getHeight();
         System.out.printf("the width of the picture is %s \n",width);
         System.out.printf("the height of the picture is %s \n",height);
-        int Num_horizontal_seams = width - NumCol;
-        int Num_vertical_seams = height - NumRow;
+        int Num_vertical_seams = width - NumCol;
+        int Num_horizontal_seams = height - NumRow;
         //checking if we have to make the picture smaller or larger 
         //and in which direction	
         
@@ -539,7 +539,7 @@ public class LoadImageApp extends Component {
 
     		else if (type.equals("general")) {
     			transposedSeam = SeamFinderGeneral(energyTable);
-    			System.out.printf("the transpose seam is in size %d %d", transposedSeam.length,transposedSeam[0].length);
+    			//System.out.printf("the transpose seam is in size %d %d", transposedSeam.length,transposedSeam[0].length);
     			
     			for(int x =0; x < transposedSeam.length; x++) {
     				seam [x][0] = transposedSeam[x][1];
@@ -625,49 +625,54 @@ public class LoadImageApp extends Component {
     	int height = img.getHeight();
     	if (direction.equals("vertical")) {
     		newImage = new BufferedImage (width+1, height, BufferedImage.TYPE_INT_ARGB);
-    		for (int y=height; y> 0; y--) {
-    			boolean shift = false;
-    			for (int x = width ; x > 0; x--) {
-    				// check if the pixel is in the seam
-    				boolean in_seam = false;
-    				if ((seam[y][0] == x) && (seam[y][1] == y)) {
-    					in_seam = true;
-    					shift = true;
-    				}
-    			if (in_seam) {
-    				if(shift) {
-    					newImage.setRGB(x, y, img.getRGB(x, y));
-    					newImage.setRGB(x+1, y, img.getRGB(x, y));
+			for (int y= 0 ; (y < height -1)  ; y++) {
+				int flag = 0; 
 
-    				} else {
-    					newImage.setRGB(x, y, img.getRGB(x, y));
-    					
+				for (int x = 0 ; (x < width)&& (flag == 0); x++) {
+    					// check if the pixel is in the seam
+    					boolean in_seam = false;
+    					if ((seam[y][0] == x) && (seam[y][1] == y)) {
+    						in_seam = true;
+    					}
+    				
+    					if (!in_seam) {
+    						newImage.setRGB(x, y, img.getRGB(x, y));    					
+    					}else {
+    						newImage.setRGB(x, y, img.getRGB(x, y));    					
+    						for (int k = x+1; k< width -1; k++) {
+    							newImage.setRGB(k, y, img.getRGB(k, y));
+    						}
+    				
     				}
-    			}
+    				flag =1;
+				}
     			}
     			
-    		}
     	}
+    	
     	else if (direction.equals("horizontal")) {
-    		newImage = new BufferedImage (width, height-1, BufferedImage.TYPE_INT_ARGB);
-    		for (int x =0; x<width; x++) {
-    			boolean shift = false;
-    			for(int y=0; y< height-1; y++) {
-    				// check if the pixel in the seam
+    		newImage = new BufferedImage (width, height+1, BufferedImage.TYPE_INT_ARGB);
+			for (int x= 0 ; (x < width -1)  ; x++) {
+				int flag = 0;
+				for (int y = 0 ; (y < height)&& (flag == 0); y++) {
+				 
+    				// check if the pixel is in the seam
     				boolean in_seam = false;
-    				if((seam[x][0] == x) && (seam [x][1] == y)) {
+    				if ((seam[x][0] == x) && (seam[x][1] == y)) {
     					in_seam = true;
-    					shift = true;
     				}
-    			if (!in_seam) {
-    				if(shift) {
-    					newImage.setRGB(x, y-1,img.getRGB(x, y));
-    				} else {
-    					newImage.setRGB(x, y, img.getRGB(x, y));
+    				
+    				if (!in_seam) {
+    						newImage.setRGB(x, y, img.getRGB(x, y));    					
+    				}else {
+						newImage.setRGB(x, y, img.getRGB(x, y));    					
+    					for (int k = y+1; k< height; k++) {
+    						newImage.setRGB(x, k, img.getRGB(x, k));
+    					}
     				}
-    			}
-    			}
-    		}
+    				flag =1;
+				}
+			}
     	} 
     
     	return newImage;
