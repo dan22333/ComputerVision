@@ -117,7 +117,7 @@ public class LoadImageApp extends Component {
     		double[][] forwardEnergy = forwardEnergy(img);
     		energyTable = forwardEnergy;
     	}
-    	int [][] seam = SeamFinder(energyTable, direction, "general");
+    	int [][] seam = SeamFinder(energyTable, direction, "simple");
     	newImage = seamRemove(img, seam, direction);
     	return newImage;
     }
@@ -134,7 +134,7 @@ public class LoadImageApp extends Component {
     		double[][] forwardEnergy = forwardEnergy(img);
     		energyTable = forwardEnergy;
     	}
-    	int [][] seam = SeamFinder(energyTable, direction, "general");
+    	int [][] seam = SeamFinder(energyTable, direction, "simple");
     	newImage = seamAdd(img, seam, direction);
     	return newImage;
     }
@@ -478,7 +478,6 @@ public class LoadImageApp extends Component {
     }
   
     
-    //************TODO*********************
     //computing the vertical seam (the general version) with dynamic programming
     private static int[][] SeamFinderSimple (double[][] energyTable){
     	int width = energyTable.length;
@@ -487,10 +486,27 @@ public class LoadImageApp extends Component {
     	double[][] dynamic = new double[width][height]; // temmporal table for dynamic programming
     	int[][] backtracker = new int[width][height];
     	double min;
+    	int min_indx;
     	int[][] seam = new int[energyTable[0].length][2];//The seam that we will return
     	//Loop the energy table to find the lowest energy path
-    	// after computing path, find the min
-    	//backtrack the minimum
+    	for ( int x =0; x<width;x++) {
+    		for (int y =0; y <height-1; y++) {
+    			dynamic[x][y+1] += dynamic [x][y]; 
+    		}
+    	}
+    	min = dynamic [0][height-1];
+    	min_indx = 0;
+    	for (int x=0; x< width; x++) {
+    		if (min > dynamic [x][height-1]) {
+    			min = dynamic [x][height-1];
+    			min_indx = x;
+    		}
+    	}
+    	//creating the seam by the column that hold the minimum
+    	for (int y=0; y<height; y++) {
+    		seam[y][0] = min_indx;
+    		seam[y][1] = y;
+    	}
     	
     	return seam;
     }
@@ -643,7 +659,7 @@ public class LoadImageApp extends Component {
     							newImage.setRGB(k, y, img.getRGB(k, y));
     						}
     				
-    				}
+    					}
     				flag =1;
 				}
     			}
@@ -666,7 +682,7 @@ public class LoadImageApp extends Component {
     						newImage.setRGB(x, y, img.getRGB(x, y));    					
     				}else {
 						newImage.setRGB(x, y, img.getRGB(x, y));    					
-    					for (int k = y+1; k< height; k++) {
+    					for (int k = y+1; k< height -1; k++) {
     						newImage.setRGB(x, k, img.getRGB(x, k));
     					}
     				}
