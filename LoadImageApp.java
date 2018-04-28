@@ -97,6 +97,7 @@ public class LoadImageApp extends Component {
         try {
             File outputfile = new File(OutputPath);
             ImageIO.write(newImage, "png", outputfile);
+            System.out.printf("the new size is %d %d", newImage.getWidth(),newImage.getHeight());
         } catch (IOException e) {
             System.err.println("Trouble saving " + OutputPath);
             return;
@@ -500,9 +501,10 @@ public class LoadImageApp extends Component {
     private static int[][] SeamFinder (double[][] energyTable, String direction, String type) {
     	//direction is either horizontal or vertical
     	//type is simple or general
-    	
-    	int[][] seam = new int[energyTable[0].length][2];//The seam that we will return
+
     	if (direction.equals("vertical")) {
+        	int[][] seam = new int[energyTable[0].length][2];//The seam that we will return
+
     		if(type.equals("simple")) {
     			seam = SeamFinderSimple(energyTable);	
     		}
@@ -512,8 +514,10 @@ public class LoadImageApp extends Component {
     		else {
     			System.out.println("the type in SeamFinder is incorrect");
     		}	
+    	return seam;
     	}
     	else if (direction.equals("horizontal")) {
+    		
     		//transposing the picture (it's energyTable)
     		double[][] transposedTable = new double[energyTable[0].length][energyTable.length]; 
     		
@@ -522,34 +526,41 @@ public class LoadImageApp extends Component {
     				transposedTable[i][j] = energyTable[j][i];
     			}
     		}
-    		energyTable = transposedTable;
-    		
-    		if(type.equals("simple")) {
-    			int[][] transposedSeam = new int[energyTable[0].length][2];
-    			transposedSeam = SeamFinderSimple(energyTable);	
-    			//***** TODO - transpose back the seam to its original energy table
+    		int[][] transposedSeam = new int[transposedTable[0].length][2];
+	    	int[][] seam = new int[transposedTable[0].length][2];//The seam that we will return
 
+    		if(type.equals("simple")) {    			
+    			transposedSeam = SeamFinderSimple(energyTable);	
+    			for(int x =0; x<energyTable[0].length; x++) {
+    				seam [x][0] = transposedSeam[x][1];
+    				seam [x][1] = transposedSeam[x][0];
+    			}
     		}
 
     		else if (type.equals("general")) {
-    			int[][] transposedSeam = new int[energyTable[0].length][2];
     			transposedSeam = SeamFinderGeneral(energyTable);
-    			//***** TODO - transpose back the seam to its original energy table
-        	
+    			System.out.printf("the transpose seam is in size %d %d", transposedSeam.length,transposedSeam[0].length);
+    			
+    			for(int x =0; x < transposedSeam.length; x++) {
+    				seam [x][0] = transposedSeam[x][1];
+    				seam [x][1] = transposedSeam[x][0];
+    			}
     		}
     		else {
     			System.out.println("the type in SeamFinder is incorrect");
     			System.exit (1);
     		}
+    		return seam;
     	}
     	
     	else {
     		System.out.println("Incorrect direction in SeamFinder. must be vertical or horizontal");
     		System.exit (1);
     	}
-    	return seam;
+    	int [][] temp = new int[1][1]; 
+    	return temp;
     }
-    
+
     // seamRemove is the function the receives the image and the "path" (coordintaes) of the seam
     // it has to remove. by creating a new image and coping there all the pixels of the original
     // image, except for the seam.
