@@ -5,6 +5,8 @@ import java.awt.image.*;
 import java.io.*;
 import javax.imageio.*;
 import javax.swing.*;
+import java.util.Arrays;
+import java.util.Collections;
 
 
 /**
@@ -76,22 +78,16 @@ public class LoadImageApp extends Component {
 
         	Num_vertical_seams = Num_vertical_seams - 1;
         }
-        //make the new picture, each step add only one seam from the same direction.
-        while (Num_horizontal_seams < 0) { //have to make the img smaller on horizontal axis
+        //make the new picture, compute in one step Num_horizontal seams to be added, and add them.
+        if (Num_horizontal_seams < 0) { //have to make the img bigger on horizontal axis
         	// Get the new image without one seam.
-            System.out.printf("we need to add the pictures %d seam in horizontal direction \n",Num_horizontal_seams);
-
-        	newImage = addSeam(newImage, "horizontal",energy);
-
-        	Num_horizontal_seams = Num_horizontal_seams + 1;
+            System.out.printf("we need to add the pictures %d seams in horizontal direction \n",Math.abs(Num_horizontal_seams));
+        	newImage = addSeam(newImage, "horizontal",energy,Num_horizontal_seams);
         }
-        while (Num_vertical_seams < 0) {
+        if (Num_vertical_seams < 0) {
         	// Get the new image without one seam.
-            System.out.printf("we need to add the pictures %d seam in vertical direction \n",Num_vertical_seams);
-
-        	newImage = addSeam(newImage, "vertical", energy);
-
-        	Num_vertical_seams = Num_vertical_seams + 1;
+            System.out.printf("we need to add the pictures %d seam in vertical direction \n",Math.abs(Num_vertical_seams));
+        	newImage = addSeam(newImage, "vertical", energy,Num_vertical_seams);
         }
         // Create the new image file.
         try {
@@ -122,7 +118,7 @@ public class LoadImageApp extends Component {
     	return newImage;
     }
   //addSeam() receives an image and adds one seam to it by the direction.
-    private static BufferedImage addSeam (BufferedImage img, String direction, int energy) {
+    private static BufferedImage addSeam (BufferedImage img, String direction, int energy, int Num) {
     	BufferedImage newImage = null;
     	double[][] energyTable = EnergyComputation(img);
     	if (energy ==1) {
@@ -134,8 +130,9 @@ public class LoadImageApp extends Component {
     		double[][] forwardEnergy = forwardEnergy(img);
     		energyTable = forwardEnergy;
     	}
-    	int [][] seam = SeamFinder(energyTable, direction, "simple");
-    	newImage = seamAdd(img, seam, direction);
+    	Num = -1* Num;
+    	int [][][] seam = kSeamFinder(energyTable, direction, "general", Num);
+    	newImage = seamAdd(img, seam, direction, Num);
     	return newImage;
     }
     
@@ -151,7 +148,6 @@ public class LoadImageApp extends Component {
     	int width = img.getWidth();
     	int height = img.getHeight();
     	double[][] entropyTable = new double[width][height];
-    	double P_mn;
     	for(int x=0; x<width; x++) {
     		for (int y=0; y < height; y++) {
     			if((x>3) &&(x<width-4)&&(y>3) &&(y< height-4)) {
@@ -502,7 +498,110 @@ public class LoadImageApp extends Component {
     	
     	return seam;
     }
-  
+  //computing the vertical seam (the simple version) with dynamic programming
+    // If we need to compute the horizontal seam, we transposed the energy table (thus the image)
+    private static int[][][] kSeamFinderGeneral (double[][] energyTable, int numSeam){
+    	int[][][] seam = new int[energyTable[0].length][2][numSeam];//The seam that we will return
+
+    	int width = energyTable.length;
+    	int height = energyTable[0].length;
+    	
+    	for(int l=0;l<numSeam;l++) { // compute for each seam a dynamic table, and after choosing the seam, increase its value to maximun
+    		double[][] dynamic = new double[width][height]; // temmporal table for dynamic programming
+        	int[][] backtracker = new int[width][height];
+        	double min;
+        	//Loop the energy table to find the lowest energy path
+        	for(int y=0; y<height; y++) {
+        		for(int x=0; x<width; x++) {
+        			if (y == 0) { // the first row
+        				dynamic [x][y] = energyTable [x][y];
+        				backtracker [x][y] = -1;
+        			}
+        			else {
+        				//the energy table except the first row
+        				//check if we are on the edges:
+        				if (x ==0) {
+        					min = Math.min(dynamic[x][y-1], dynamic[x+1][y-1]);
+        					if (min == dynamic[x][y-1]) {
+        						// note to the backtracker
+        						backtracker [x][y] =1;
+        					}
+        					else {
+        						backtracker[x][y] = 2;
+        					}
+        				
+        				} else if ( x==(width -1)) {
+        					min = Math.min(dynamic [x][y-1], dynamic[x-1][y-1]);
+        					if(min == dynamic [x][y-1]) {
+        						backtracker[x][y] =1;
+        					} else {
+        						backtracker [x][y] = 0;
+        					}
+        				} else {
+        					min = Math.min(dynamic[x-1][y-1], Math.min(dynamic[x][y-1], dynamic[x+1][y-1]));
+        					if (min == dynamic [x-1][y-1]) {
+        						backtracker [x][y] =0;
+        					} else if (min == dynamic [x][y-1]) {
+        						backtracker [x][y] =1;
+        					} else {
+        						backtracker [x][y] =2;
+        					}
+        				}
+        				dynamic [x][y] = energyTable [x][y] +min;
+        			}
+        		}
+        	}
+        	
+        	
+        	// after computing path, backtrack the minimum
+        	// searching in the last row for the minimum
+        	double min_number = dynamic[0][height-1];
+        	int min_indx =0;
+        	for (int x =0; x< width; x++) {
+        		if (min_number > dynamic[x][height-1]) {
+        			min_indx =x;
+        			min_number = dynamic [x][height-1];
+        		}
+        		
+        	}
+        	
+        	//after finding the minimum, we will backtrack the trace to it
+        	int y_indx = height -1;
+        	int x_indx = min_indx;
+        	seam[y_indx][0][l] = x_indx;
+        	seam[x_indx][1][l] = y_indx;
+        	int back;
+        	while( y_indx >0) {
+        		back = backtracker [x_indx][y_indx];
+        		if (back !=-1) {
+        			if (back ==0) {
+        				x_indx -= 1;
+        			}else if (back ==1) {
+        				;
+        			} else {
+        				x_indx += 1;
+        			}
+        		}else {
+        			;
+        		}
+        		y_indx =y_indx -1;
+        		seam[y_indx][0][l] = x_indx;
+        		seam[y_indx][1][l] = y_indx;
+        	}
+        for (int i=0; i<height;i++) { // for each index in the seam number l
+        	for(int y=0; y<height; y++) {
+        		for(int x=0; x<width; x++) { //find this index in the energy table
+        			if((x==seam[i][0][l])&& (y==seam[i][1][l])) {
+        				energyTable[x][y] = 10000000; //change the value of this index to maximum
+        			}
+        			
+        		}
+            }
+        }
+        
+    }
+    return seam;
+    }  
     
     //computing the vertical seam (the general version) with dynamic programming
     private static int[][] SeamFinderSimple (double[][] energyTable){
@@ -536,7 +635,57 @@ public class LoadImageApp extends Component {
     	
     	return seam;
     }
-    
+    private static int[][][] kSeamFinderSimple (double[][] energyTable, int k){
+    	int width = energyTable.length;
+    	int height = energyTable[0].length;
+    	
+    	double[][] dynamic = new double[width][height]; // temmporal table for dynamic programming
+    	int[][] backtracker = new int[width][height];
+    	double[] min;
+    	min = new double [width];
+    	int[] min_indx= new int[k];
+    	int[][][] seam = new int[energyTable[0].length][2][k];//The seam that we will return
+    	//Loop the energy table to find the k lowest energy path
+    	for ( int x =0; x<width;x++) {
+    		for (int y =0; y <height-1; y++) {
+    			dynamic[x][y+1] += dynamic [x][y]; 
+    		}
+    	}
+    	for (int i=0;i<k;i++) { //initializing
+    		min_indx[i] = width+1;
+    	}
+    	for (int x= 0;x<width;x++) { // getting the last 
+    		min[x] = dynamic[x][height-1];
+    	}
+    	Arrays.sort(min);
+    	for(int i=0; i<k; i++) { // finding k minimum seams
+        	int flag =0;
+    		for (int x=0; (flag==0)&&(x< width); x++) {
+        		if(min[k] == dynamic[x][height-1]) {
+        			if (i==0) {
+        				min_indx[i] = x;
+        				flag=1;
+        			}else {
+        				if(x != min_indx[i-1]) {
+            				min_indx[i] = x;
+            				flag=1;
+            			}
+        			}
+        			
+        		}	
+    		}
+    	}
+    	//creating the seam by the column that hold the minimum
+    	for(int i = 0; i<k;i++) {
+    		for (int y=0; y<height; y++) {
+        		seam[y][0][i] = min_indx[i];
+        		seam[y][1][i] = y;
+        	}	
+    	}
+    	
+    	
+    	return seam;
+    }
     
     // SeamFinder Calls the functions that suppose to find the seam, according to the direction and simple/general.
     // The seam (a path in the picture) with minimum total energy
@@ -602,6 +751,73 @@ public class LoadImageApp extends Component {
     	int [][] temp = new int[1][1]; 
     	return temp;
     }
+    private static int[][][] kSeamFinder (double[][] energyTable, String direction, String type, int k) {
+    	//direction is either horizontal or vertical
+    	//type is simple or general
+    	// we find K seams at once, to be add to the new image
+
+    	if (direction.equals("vertical")) {
+        	int[][][] seam = new int[energyTable[0].length][2][k];//The seam that we will return
+
+    		if(type.equals("simple")) {
+    			seam = kSeamFinderSimple(energyTable,k);	
+    		}
+    		else if (type.equals("general")) {
+    			seam = kSeamFinderGeneral(energyTable,k);
+    		}
+    		else {
+    			System.out.println("the type in SeamFinder is incorrect");
+    		}	
+    	return seam;
+    	}
+    	else if (direction.equals("horizontal")) {
+    		
+    		//transposing the picture (it's energyTable)
+    		double[][] transposedTable = new double[energyTable[0].length][energyTable.length]; 
+    		
+    		for (int i=0; i< energyTable[0].length; i++ ) {
+    			for (int j=0; j<energyTable.length; j++) {
+    				transposedTable[i][j] = energyTable[j][i];
+    			}
+    		}
+    		int[][][] transposedSeam = new int[transposedTable[0].length][2][k];
+	    	int[][][] seam = new int[transposedTable[0].length][2][k];//The seam that we will return
+
+    		if(type.equals("simple")) {    			
+    			transposedSeam = kSeamFinderSimple(energyTable,k);	
+    			for(int i=0;i<k;i++) {
+    				for(int x =0; x<energyTable[0].length; x++) {
+        				seam [x][0][i] = transposedSeam[x][1][i];
+        				seam [x][1][i] = transposedSeam[x][0][i];
+        			}	
+    			}
+    			
+    		}
+
+    		else if(type.equals("general")) {    			
+    			transposedSeam = kSeamFinderGeneral(energyTable,k);	
+    			for(int i=0;i<k;i++) {
+    				for(int x =0; x<energyTable[0].length; x++) {
+        				seam [x][0][i] = transposedSeam[x][1][i];
+        				seam [x][1][i] = transposedSeam[x][0][i];
+        			}	
+    			}
+    			
+    		}
+    		else {
+    			System.out.println("the type in SeamFinder is incorrect");
+    			System.exit (1);
+    		}
+    		return seam;
+    	}
+    	
+    	else {
+    		System.out.println("Incorrect direction in SeamFinder. must be vertical or horizontal");
+    		System.exit (1);
+    	}
+    	int [][][] temp = new int[1][1][1]; 
+    	return temp;
+    }
 
     // seamRemove is the function the receives the image and the "path" (coordintaes) of the seam
     // it has to remove. by creating a new image and coping there all the pixels of the original
@@ -661,59 +877,65 @@ public class LoadImageApp extends Component {
     //  seamAdd is the function the receives the image and the "path" (coordintaes) of the seam
     // it has to double. By creating a new image and coping there all the pixels of the original
     // image, except for the seam which is copied twice.
-    private static BufferedImage seamAdd (BufferedImage img, int[][] seam, String direction) {
+    private static BufferedImage seamAdd (BufferedImage img, int[][][] seam, String direction,int k) {
     	BufferedImage newImage = null;
     	int width = img.getWidth();
     	int height = img.getHeight();
     	if (direction.equals("vertical")) {
-    		newImage = new BufferedImage (width+1, height, BufferedImage.TYPE_INT_ARGB);
-			for (int y= 0 ; (y < height -1)  ; y++) {
-				int flag = 0; 
+    		newImage = new BufferedImage (width+k, height, BufferedImage.TYPE_INT_ARGB);
+			for(int i = 0; i<k;i++) {
+				for (int y= 0 ; (y < height -1)  ; y++) { // at every stage create an image that is larger by one seam
+					int flag = 0; 
 
-				for (int x = 0 ; (x < width)&& (flag == 0); x++) {
-    					// check if the pixel is in the seam
-    					boolean in_seam = false;
-    					if ((seam[y][0] == x) && (seam[y][1] == y)) {
-    						in_seam = true;
-    					}
-    				
-    					if (!in_seam) {
-    						newImage.setRGB(x, y, img.getRGB(x, y));    					
-    					}else {
-    						newImage.setRGB(x, y, img.getRGB(x, y));    					
-    						for (int k = x+1; k< width -1; k++) {
-    							newImage.setRGB(k, y, img.getRGB(k, y));
-    						}
-    				
-    					}
-    				flag =1;
-				}
-    			}
+					for (int x = 0 ; (x < width)&& (flag == 0); x++) {
+	    					// check if the pixel is in the seam
+	    					boolean in_seam = false;
+	    					if ((seam[y][0][i] == x) && (seam[y][1][i] == y)) {
+	    						in_seam = true;
+	    					}
+	    				
+	    					if (!in_seam) {
+	    						newImage.setRGB(x, y, img.getRGB(x, y));    					
+	    					}else {
+	    						newImage.setRGB(x, y, img.getRGB(x, y));    					
+	    						for (int j = x+1; j< width -1; j++) {
+	    							newImage.setRGB(j, y, img.getRGB(j, y));
+	    						}
+	    				
+	    					}
+	    				flag =1;
+					}
+	    			}	
+			}
+    		
     			
     	}
     	
     	else if (direction.equals("horizontal")) {
-    		newImage = new BufferedImage (width, height+1, BufferedImage.TYPE_INT_ARGB);
-			for (int x= 0 ; (x < width -1)  ; x++) {
-				int flag = 0;
-				for (int y = 0 ; (y < height)&& (flag == 0); y++) {
-				 
-    				// check if the pixel is in the seam
-    				boolean in_seam = false;
-    				if ((seam[x][0] == x) && (seam[x][1] == y)) {
-    					in_seam = true;
-    				}
-    				
-    				if (!in_seam) {
-    						newImage.setRGB(x, y, img.getRGB(x, y));    					
-    				}else {
-						newImage.setRGB(x, y, img.getRGB(x, y));    					
-    					for (int k = y+1; k< height -1; k++) {
-    						newImage.setRGB(x, k, img.getRGB(x, k));
-    					}
-    				}
-    				flag =1;
+    		newImage = new BufferedImage (width, height+k, BufferedImage.TYPE_INT_ARGB);
+			for (int i=0;i<k;i++) {
+				for (int x= 0 ; (x < width -1)  ; x++) {
+					int flag = 0;
+					for (int y = 0 ; (y < height)&& (flag == 0); y++) {
+					 
+	    				// check if the pixel is in the seam
+	    				boolean in_seam = false;
+	    				if ((seam[x][0][i] == x) && (seam[x][1][i] == y)) {
+	    					in_seam = true;
+	    				}
+	    				
+	    				if (!in_seam) {
+	    						newImage.setRGB(x, y, img.getRGB(x, y));    					
+	    				}else {
+							newImage.setRGB(x, y, img.getRGB(x, y));    					
+	    					for (int j = y+1; j< height -1; j++) {
+	    						newImage.setRGB(x, j, img.getRGB(x, j));
+	    					}
+	    				}
+	    				flag =1;
+					}
 				}
+	    	
 			}
     	} 
     
